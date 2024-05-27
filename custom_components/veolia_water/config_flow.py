@@ -10,7 +10,6 @@ from .debug import decoratorexceptionDebug
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
-
 class VeoliaFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for veolia."""
 

@@ -3,7 +3,7 @@
     "name": "Veolia Water",
     "version": "1.0",
     "documentation": "https://github.com/your_github_username/veolia_water",
-    "requirements": ["xmltodict", "requests", "voluptuous"],
+    "requirements": ["xmltodict", "requests"],
     "dependencies": [],
     "codeowners": ["@McSon2"],
     "config_flow": true

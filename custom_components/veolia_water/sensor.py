@@ -1,9 +1,12 @@
 import logging
+from datetime import timedelta
+
 from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
 from homeassistant.const import UnitOfVolume
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from datetime import timedelta
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.exceptions import ConfigEntryNotReady
 
 from .const import DOMAIN
 from .VeoliaClient import VeoliaClient
