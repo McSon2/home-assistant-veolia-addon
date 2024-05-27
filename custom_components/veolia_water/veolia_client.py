@@ -4,6 +4,7 @@ import xmltodict
 from datetime import datetime
 from copy import copy
 import xml.etree.ElementTree as ET
+from homeassistant.core import HomeAssistant
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -40,15 +41,15 @@ class VeoliaClient:
             _LOGGER.error(f"wrong authentication : {e}")
             raise Exception(f"wrong authentication : {e}")
 
-    def update_all(self):
+    def update_all(self, hass: HomeAssistant):
         """
         Return the latest collected data.
 
         Returns:
             dict: dict of consumptions by date and by period
         """
-        self.update()
-        self.update(True)
+        hass.async_add_executor_job(self.update)
+        hass.async_add_executor_job(self.update, True)
         return self.attributes
 
     def update(self, month=False):

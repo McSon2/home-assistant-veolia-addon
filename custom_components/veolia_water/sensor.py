@@ -3,13 +3,14 @@ from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
 from homeassistant.const import UnitOfVolume
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from datetime import timedelta
+from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
 from .veolia_client import VeoliaClient
 
 _LOGGER = logging.getLogger(__name__)
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
+async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
     email = config_entry.data["email"]
     password = config_entry.data["password"]
     abo_id = config_entry.data.get("abo_id")
@@ -51,6 +52,6 @@ class VeoliaDataUpdateCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self):
         try:
-            return self.client.update_all()
+            return await self.hass.async_add_executor_job(self.client.update_all, self.hass)
         except Exception as e:
             raise UpdateFailed(f"Error fetching data: {e}")
