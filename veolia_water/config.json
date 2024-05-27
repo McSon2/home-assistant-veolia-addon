@@ -19,7 +19,6 @@
     "token": "str"
   },
   "ports": {
-    "80/tcp": 80
-  },
-  "webui": "http://[HOST]:[PORT:80]"
+    "8787/tcp": 8787
+  }
 }
