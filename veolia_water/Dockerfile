@@ -7,6 +7,9 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # Install dependencies
 RUN apk add --no-cache python3 py3-pip
 
+# Install Python packages
+RUN pip install requests xmltodict
+
 # Copy data
 COPY run.sh /run.sh
 COPY veolia_client.py /veolia_client.py
