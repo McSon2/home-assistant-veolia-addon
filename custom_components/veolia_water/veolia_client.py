@@ -16,8 +16,9 @@ FORMAT_DATE = "%Y-%m-%d"
 class VeoliaClient:
     """Class to manage the webServices system."""
 
-    def __init__(self, email: str, password: str, abo_id="") -> None:
+    def __init__(self, hass: HomeAssistant, email: str, password: str, abo_id="") -> None:
         """Initialize the client object."""
+        self.hass = hass
         self._email = email
         self._pwd = password
         self.__aboId = abo_id

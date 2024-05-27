@@ -15,7 +15,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     password = config_entry.data["password"]
     abo_id = config_entry.data.get("abo_id")
 
-    client = VeoliaClient(email, password, abo_id)
+    client = VeoliaClient(hass, email, password, abo_id)
     coordinator = VeoliaDataUpdateCoordinator(hass, client=client)
 
     await coordinator.async_config_entry_first_refresh()
