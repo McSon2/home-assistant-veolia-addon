@@ -4,7 +4,7 @@ import logging
 from homeassistant import config_entries
 import voluptuous as vol
 
-from .veolia_client import BadCredentialsException, VeoliaClient
+from .veolia_client import BadCredentialsException, VeoliaClient  # Assurez-vous que la casse est correcte
 from .const import CONF_ABO_ID, CONF_PASSWORD, CONF_USERNAME, DOMAIN
 from .debug import decoratorexceptionDebug
 

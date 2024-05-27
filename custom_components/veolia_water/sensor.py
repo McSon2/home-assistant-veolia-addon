@@ -9,7 +9,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.exceptions import ConfigEntryNotReady
 
 from .const import DOMAIN
-from .VeoliaClient import VeoliaClient
+from .veolia_client import VeoliaClient  # Assurez-vous que la casse est correcte
 
 _LOGGER = logging.getLogger(__name__)
 
