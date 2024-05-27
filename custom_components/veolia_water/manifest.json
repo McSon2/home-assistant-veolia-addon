@@ -5,7 +5,7 @@
     "documentation": "https://github.com/your_github_username/veolia_water",
     "requirements": ["xmltodict", "requests", "voluptuous"],
     "dependencies": [],
-    "codeowners": ["@your_github_username"],
+    "codeowners": ["@McSon2"],
     "config_flow": true
   }
   

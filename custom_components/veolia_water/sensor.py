@@ -1,7 +1,8 @@
 import logging
 from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
-from homeassistant.const import VOLUME_CUBIC_METERS
+from homeassistant.const import UnitOfVolume
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from datetime import timedelta
 
 from .const import DOMAIN
 from .veolia_client import VeoliaClient
@@ -25,7 +26,7 @@ class VeoliaWaterSensor(SensorEntity):
         self._attr_name = "Veolia Water Consumption"
         self._attr_device_class = "water"
         self._attr_state_class = "total_increasing"
-        self._attr_unit_of_measurement = VOLUME_CUBIC_METERS
+        self._attr_unit_of_measurement = UnitOfVolume.CUBIC_METERS
 
     @property
     def state(self):
