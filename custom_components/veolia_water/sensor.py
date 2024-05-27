@@ -6,19 +6,23 @@ from datetime import timedelta
 from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
-from .veolia_client import VeoliaClient
+from .VeoliaClient import VeoliaClient
 
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
-    email = config_entry.data["email"]
+    email = config_entry.data["username"]
     password = config_entry.data["password"]
     abo_id = config_entry.data.get("abo_id")
 
-    client = VeoliaClient(hass, email, password, abo_id)
+    session = async_get_clientsession(hass)
+    client = VeoliaClient(email, password, session, abo_id)
     coordinator = VeoliaDataUpdateCoordinator(hass, client=client)
 
-    await coordinator.async_config_entry_first_refresh()
+    await coordinator.async_refresh()
+    if not coordinator.last_update_success:
+        raise ConfigEntryNotReady
+
     async_add_entities([VeoliaWaterSensor(coordinator)], True)
 
 class VeoliaWaterSensor(SensorEntity):

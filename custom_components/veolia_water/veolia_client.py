@@ -4,7 +4,6 @@ import xmltodict
 from datetime import datetime
 from copy import copy
 import xml.etree.ElementTree as ET
-from homeassistant.core import HomeAssistant
 
 from .const import DAILY, FORMAT_DATE, HISTORY, MONTHLY
 
@@ -21,9 +20,8 @@ class BadCredentialsException(Exception):
 class VeoliaClient:
     """Class to manage the webServices system."""
 
-    def __init__(self, hass: HomeAssistant, email: str, password: str, abo_id="") -> None:
+    def __init__(self, email: str, password: str, session=requests.Session(), abo_id="") -> None:
         """Initialize the client object."""
-        self.hass = hass
         self._email = email
         self._pwd = password
         self.__aboId = abo_id
@@ -32,7 +30,7 @@ class VeoliaClient:
         self.__tokenPassword = None
         self.success = False
         self.attributes = {DAILY: {}, MONTHLY: {}}
-        self.session = requests.Session()
+        self.session = session
         self.__enveloppe = self.__create_enveloppe()
 
     def login(self):
@@ -120,7 +118,7 @@ class VeoliaClient:
                 # sort date desc and append in list of tuple (date,liters)
                 if month:
                     if isinstance(lstindex, list):
-                        lstindex.sort(key=operator.itemgetter("annee", "mois"), reverse=True)
+                        lstindex.sort(key=lambda x: (x["annee"], x["mois"]), reverse=True)
                         for val in lstindex:
                             self.attributes[period][HISTORY].append(
                                 (
@@ -138,7 +136,7 @@ class VeoliaClient:
 
                 else:
                     if isinstance(lstindex, list):
-                        lstindex.sort(key=operator.itemgetter("dateReleve"), reverse=True)
+                        lstindex.sort(key=lambda x: x["dateReleve"], reverse=True)
                         for val in lstindex:
                             self.attributes[period][HISTORY].append(
                                 (
@@ -167,6 +165,7 @@ class VeoliaClient:
             anonymous=True,
         )
         _LOGGER.debug(f"Sending authentication request with email: {self._email}")
+        _LOGGER.debug(f"Authentication request data: {datas}")
         resp = self.session.post(
             self.address,
             headers=self.headers,
