@@ -1,6 +1,6 @@
 {
   "name": "Veolia Water Consumption",
-  "version": "1.0",
+  "version": "0.0.1",
   "slug": "veolia_water",
   "description": "Fetch water consumption data from Veolia",
   "startup": "services",
