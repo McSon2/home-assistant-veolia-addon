@@ -5,10 +5,14 @@ FROM ${BUILD_FROM}
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Install dependencies
-RUN apk add --no-cache python3 py3-pip
+RUN apk add --no-cache \
+    python3 \
+    py3-pip \
+    build-base \
+    libffi-dev
 
 # Install Python packages
-RUN pip install requests xmltodict
+RUN pip install --no-cache-dir requests xmltodict
 
 # Copy data
 COPY run.sh /run.sh
