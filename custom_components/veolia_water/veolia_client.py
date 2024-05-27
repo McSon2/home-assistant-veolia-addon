@@ -156,14 +156,16 @@ class VeoliaClient:
             {"cptEmail": self._email, "cptPwd": self._pwd},
             anonymous=True,
         )
+        _LOGGER.debug(f"Sending authentication request with email: {self._email}")
         resp = self.session.post(
             self.address,
             headers=self.headers,
             data=datas,
         )
-        _LOGGER.debug(f"resp status={resp.status_code}")
+        _LOGGER.debug(f"Response status={resp.status_code}")
+        _LOGGER.debug(f"Response text={resp.text}")
         if resp.status_code != 200:
-            _LOGGER.error("problem with authentication")
+            _LOGGER.error("Problem with authentication")
             raise Exception(f"POST /_get_tokenPassword/ {resp.status_code}")
         else:
             result = xmltodict.parse(f"<soap:Envelope{resp.text.split('soap:Envelope')[1]}soap:Envelope>")
