@@ -6,12 +6,17 @@ from copy import copy
 import xml.etree.ElementTree as ET
 from homeassistant.core import HomeAssistant
 
+from .const import DAILY, FORMAT_DATE, HISTORY, MONTHLY
+
 _LOGGER = logging.getLogger(__name__)
 
-DAILY = "daily"
-MONTHLY = "monthly"
-HISTORY = "history"
-FORMAT_DATE = "%Y-%m-%d"
+class VeoliaError(Exception):
+    """Error from API."""
+    pass
+
+class BadCredentialsException(Exception):
+    """Wrong authentication."""
+    pass
 
 class VeoliaClient:
     """Class to manage the webServices system."""
@@ -33,14 +38,14 @@ class VeoliaClient:
     def login(self):
         """Check if login is right.
 
-        raise Exception if not
+        raise BadCredentialsException if not
         """
         try:
             _LOGGER.info("Check credentials")
             self._get_tokenPassword(check_only=True)
         except Exception as e:
             _LOGGER.error(f"wrong authentication : {e}")
-            raise Exception(f"wrong authentication : {e}")
+            raise BadCredentialsException(f"wrong authentication : {e}")
 
     def update_all(self):
         """
@@ -80,7 +85,10 @@ class VeoliaClient:
         """Fetch latest data from Veolia."""
         _LOGGER.debug(f"_fetch_data by month ? {month}")
         period = MONTHLY if month else DAILY
-        action = "getConsommationMensuelle" if month else "getConsommationJournaliere"
+        if month:
+            action = "getConsommationMensuelle"
+        else:
+            action = "getConsommationJournaliere"
         _LOGGER.debug(f"action={action}")
         datas = self.__construct_body(action, {"aboNum": self.__aboId}, anonymous=False)
 
@@ -92,7 +100,8 @@ class VeoliaClient:
         _LOGGER.debug(str(resp))
         _LOGGER.debug(str(resp.text))
         if resp.status_code != 200:
-            msg = f"Error {resp.status_code} fetching data: "
+            # Améliorer le retour si erreur 500 : possibilité de récupérer le message du serveur
+            msg = f"Error {resp.status_code} fetching data :"
             try:
                 msg += xmltodict.parse(f"<soap:Envelope{resp.text.split('soap:Envelope')[1]}soap:Envelope>")[
                     "soap:Envelope"
@@ -100,7 +109,7 @@ class VeoliaClient:
             except Exception:
                 msg += str(resp.text)
             _LOGGER.error(msg)
-            raise Exception(f"{msg}")
+            raise VeoliaError(f"{msg}")
         else:
             try:
                 result = xmltodict.parse(f"<soap:Envelope{resp.text.split('soap:Envelope')[1]}soap:Envelope>")
@@ -108,9 +117,10 @@ class VeoliaClient:
                 lstindex = result["soap:Envelope"]["soap:Body"][f"ns2:{action}Response"]["return"]
                 self.attributes[period][HISTORY] = []
 
+                # sort date desc and append in list of tuple (date,liters)
                 if month:
                     if isinstance(lstindex, list):
-                        lstindex.sort(key=lambda x: (x["annee"], x["mois"]), reverse=True)
+                        lstindex.sort(key=operator.itemgetter("annee", "mois"), reverse=True)
                         for val in lstindex:
                             self.attributes[period][HISTORY].append(
                                 (
@@ -128,7 +138,7 @@ class VeoliaClient:
 
                 else:
                     if isinstance(lstindex, list):
-                        lstindex.sort(key=lambda x: x["dateReleve"], reverse=True)
+                        lstindex.sort(key=operator.itemgetter("dateReleve"), reverse=True)
                         for val in lstindex:
                             self.attributes[period][HISTORY].append(
                                 (
@@ -147,7 +157,7 @@ class VeoliaClient:
                         self.attributes["last_index"] = int(lstindex["index"]) + int(lstindex["consommation"])
                 self.success = True
             except ValueError:
-                raise Exception("Issue with accessing data")
+                raise VeoliaError("Issue with accessing data")
 
     def _get_tokenPassword(self, check_only=False):
         """Get token password for next actions who need authentication."""
@@ -166,7 +176,7 @@ class VeoliaClient:
         _LOGGER.debug(f"Response text={resp.text}")
         if resp.status_code != 200:
             _LOGGER.error("Problem with authentication")
-            raise Exception(f"POST /_get_tokenPassword/ {resp.status_code}")
+            raise VeoliaError(f"POST /_get_tokenPassword/ {resp.status_code}")
         else:
             result = xmltodict.parse(f"<soap:Envelope{resp.text.split('soap:Envelope')[1]}soap:Envelope>")
             _LOGGER.debug(f"result_getauth={result}")
