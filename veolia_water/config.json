@@ -1,26 +1,25 @@
 {
-    "name": "Veolia Water Consumption",
-    "version": "1.0",
-    "slug": "veolia_water",
-    "description": "Fetch water consumption data from Veolia",
-    "startup": "services",
-    "arch": ["armv7", "armhf", "aarch64", "amd64", "i386"],
-    "boot": "auto",
-    "options": {
-      "email": "your-email@example.com",
-      "password": "your-password",
-      "abo_id": "your-abo-id",
-      "token": "your-home-assistant-token"
-    },
-    "schema": {
-      "email": "str",
-      "password": "str",
-      "abo_id": "str",
-      "token": "str"
-    },
-    "ports": {
-      "80/tcp": null
-    },
-    "webui": "http://[HOST]:[PORT]"
-  }
-  
+  "name": "Veolia Water Consumption",
+  "version": "1.0",
+  "slug": "veolia_water",
+  "description": "Fetch water consumption data from Veolia",
+  "startup": "services",
+  "arch": ["armv7", "armhf", "aarch64", "amd64", "i386"],
+  "boot": "auto",
+  "options": {
+    "email": "your-email@example.com",
+    "password": "your-password",
+    "abo_id": "your-abo-id",
+    "token": "your-home-assistant-token"
+  },
+  "schema": {
+    "email": "str",
+    "password": "str",
+    "abo_id": "str",
+    "token": "str"
+  },
+  "ports": {
+    "80/tcp": 80
+  },
+  "webui": "http://[HOST]:[PORT:80]"
+}

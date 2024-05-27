@@ -1,6 +1,6 @@
 name: Home Assistant Veolia Add-ons
 url: https://github.com/McSon2/home-assistant-veolia-addon
-maintainer: SALTET Maxime maximesaltet@gmail.com
+maintainer: SALTET Maxime <maximesaltet@gmail.com>
 description: >
   This repository contains Home Assistant add-ons to integrate various services.
 addons:
