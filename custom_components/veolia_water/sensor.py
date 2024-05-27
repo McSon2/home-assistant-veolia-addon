@@ -52,6 +52,6 @@ class VeoliaDataUpdateCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self):
         try:
-            return await self.hass.async_add_executor_job(self.client.update_all, self.hass)
+            return await self.hass.async_add_executor_job(self.client.update_all)
         except Exception as e:
             raise UpdateFailed(f"Error fetching data: {e}")

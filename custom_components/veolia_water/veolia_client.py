@@ -41,15 +41,15 @@ class VeoliaClient:
             _LOGGER.error(f"wrong authentication : {e}")
             raise Exception(f"wrong authentication : {e}")
 
-    def update_all(self, hass: HomeAssistant):
+    def update_all(self):
         """
         Return the latest collected data.
 
         Returns:
             dict: dict of consumptions by date and by period
         """
-        hass.async_add_executor_job(self.update)
-        hass.async_add_executor_job(self.update, True)
+        self.update()
+        self.update(True)
         return self.attributes
 
     def update(self, month=False):
@@ -67,7 +67,7 @@ class VeoliaClient:
         self._fetch_data(month)
         if not self.success:
             return
-        period = MONTHLY if month is True else DAILY
+        period = MONTHLY if month else DAILY
         return self.attributes[period]
 
     def close_session(self):
@@ -78,7 +78,7 @@ class VeoliaClient:
     def _fetch_data(self, month=False):
         """Fetch latest data from Veolia."""
         _LOGGER.debug(f"_fetch_data by month ? {month}")
-        period = MONTHLY if month is True else DAILY
+        period = MONTHLY if month else DAILY
         action = "getConsommationMensuelle" if month else "getConsommationJournaliere"
         _LOGGER.debug(f"action={action}")
         datas = self.__construct_body(action, {"aboNum": self.__aboId}, anonymous=False)
