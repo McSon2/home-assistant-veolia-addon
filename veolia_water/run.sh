@@ -7,4 +7,4 @@ abo_id=$(bashio::config 'abo_id')
 token=$(bashio::config 'token')
 
 # Execute the Python script with the provided configuration
-python3 /veolia_client.py --email "$email" --password "$password" --abo_id "$abo_id" --token "$token"
+exec python3 /etc/services.d/veolia/veolia_client.py --email "$email" --password "$password" --abo_id "$abo_id" --token "$token"
