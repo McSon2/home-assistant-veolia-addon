@@ -1,1 +1,5 @@
 DOMAIN = "veolia_water"
+DAILY = "daily"
+FORMAT_DATE = "%Y-%m-%d"
+HISTORY = "history"
+MONTHLY = "monthly"
