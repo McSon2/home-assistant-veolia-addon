@@ -4,11 +4,11 @@ import logging
 from homeassistant import config_entries
 import voluptuous as vol
 
-from .VeoliaClient import BadCredentialsException, VeoliaClient
+from .veolia_client import BadCredentialsException, VeoliaClient
 from .const import CONF_ABO_ID, CONF_PASSWORD, CONF_USERNAME, DOMAIN
 from .debug import decoratorexceptionDebug
 
-_LOGGER: logging.Logger = logging.getLogger(__package__)
+_LOGGER = logging.getLogger(__name__)
 
 class VeoliaFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for veolia."""
@@ -64,7 +64,7 @@ class VeoliaFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     @decoratorexceptionDebug
     async def _test_credentials(self, username, password):
-        """Return true if credentials is valid."""
+        """Return true if credentials are valid."""
         try:
             client = VeoliaClient(username, password)
             await self.hass.async_add_executor_job(client.login)
