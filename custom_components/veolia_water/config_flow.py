@@ -12,7 +12,7 @@ _LOGGER: logging.Logger = logging.getLogger(__package__)
 
 
 class VeoliaFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
-    """Config flow for veolia."""
+    """Config flow for Veolia."""
 
     VERSION = 1
     CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_POLL
@@ -26,10 +26,6 @@ class VeoliaFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(self, user_input=None):
         """Handle a flow initialized by the user."""
         self._errors = {}
-
-        # Uncomment the next 2 lines if only a single instance of the integration is allowed:
-        # if self._async_current_entries():
-        #     return self.async_abort(reason="single_instance_allowed")
 
         if user_input is not None:
             valid = await self._test_credentials(user_input[CONF_USERNAME], user_input[CONF_PASSWORD])
@@ -45,7 +41,6 @@ class VeoliaFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             return await self._show_config_form(user_input)
 
         user_input = {}
-        # Provide defaults for form
         user_input[CONF_USERNAME] = ""
         user_input[CONF_PASSWORD] = ""
         user_input[CONF_ABO_ID] = ""
@@ -77,3 +72,7 @@ class VeoliaFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         except BadCredentialsException:
             pass
         return False
+
+
+# Enregistrer le handler de flux de configuration
+config_entries.HANDLERS.register(DOMAIN)(VeoliaFlowHandler)
