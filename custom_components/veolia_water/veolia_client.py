@@ -1,21 +1,30 @@
+"""API Program for Veolia."""
+
+from copy import deepcopy as copy
+from datetime import datetime
 import logging
+import operator
+import xml.etree.ElementTree as ET
+
 import requests
 import xmltodict
-from datetime import datetime
-from copy import copy
-import xml.etree.ElementTree as ET
 
 from .const import DAILY, FORMAT_DATE, HISTORY, MONTHLY
 
-_LOGGER = logging.getLogger(__name__)
+_LOGGER: logging.Logger = logging.getLogger(__package__)
+
 
 class VeoliaError(Exception):
     """Error from API."""
+
     pass
+
 
 class BadCredentialsException(Exception):
     """Wrong authentication."""
+
     pass
+
 
 class VeoliaClient:
     """Class to manage the webServices system."""
@@ -30,7 +39,8 @@ class VeoliaClient:
         self.__tokenPassword = None
         self.success = False
         self.attributes = {DAILY: {}, MONTHLY: {}}
-        self.session = session
+        # self.session = session
+        self.session = requests.Session()
         self.__enveloppe = self.__create_enveloppe()
 
     def login(self):
@@ -47,7 +57,7 @@ class VeoliaClient:
 
     def update_all(self):
         """
-        Return the latest collected data.
+        Return the latest collected datas.
 
         Returns:
             dict: dict of consumptions by date and by period
@@ -58,7 +68,7 @@ class VeoliaClient:
 
     def update(self, month=False):
         """
-        Return the latest collected data by arg.
+        Return the latest collected datas by arg.
 
         Args:
             month (bool, optional): if True returns consumption by Month else by Day. Defaults to False.
@@ -71,7 +81,7 @@ class VeoliaClient:
         self._fetch_data(month)
         if not self.success:
             return
-        period = MONTHLY if month else DAILY
+        period = MONTHLY if month is True else DAILY
         return self.attributes[period]
 
     def close_session(self):
@@ -82,8 +92,8 @@ class VeoliaClient:
     def _fetch_data(self, month=False):
         """Fetch latest data from Veolia."""
         _LOGGER.debug(f"_fetch_data by month ? {month}")
-        period = MONTHLY if month else DAILY
-        if month:
+        period = MONTHLY if month is True else DAILY
+        if month is True:
             action = "getConsommationMensuelle"
         else:
             action = "getConsommationJournaliere"
@@ -107,7 +117,7 @@ class VeoliaClient:
             except Exception:
                 msg += str(resp.text)
             _LOGGER.error(msg)
-            raise VeoliaError(f"{msg}")
+            raise Exception(f"{msg}")
         else:
             try:
                 result = xmltodict.parse(f"<soap:Envelope{resp.text.split('soap:Envelope')[1]}soap:Envelope>")
@@ -116,9 +126,9 @@ class VeoliaClient:
                 self.attributes[period][HISTORY] = []
 
                 # sort date desc and append in list of tuple (date,liters)
-                if month:
+                if month is True:
                     if isinstance(lstindex, list):
-                        lstindex.sort(key=lambda x: (x["annee"], x["mois"]), reverse=True)
+                        lstindex.sort(key=operator.itemgetter("annee", "mois"), reverse=True)
                         for val in lstindex:
                             self.attributes[period][HISTORY].append(
                                 (
@@ -136,7 +146,7 @@ class VeoliaClient:
 
                 else:
                     if isinstance(lstindex, list):
-                        lstindex.sort(key=lambda x: x["dateReleve"], reverse=True)
+                        lstindex.sort(key=operator.itemgetter("dateReleve"), reverse=True)
                         for val in lstindex:
                             self.attributes[period][HISTORY].append(
                                 (
@@ -156,26 +166,25 @@ class VeoliaClient:
                 self.success = True
             except ValueError:
                 raise VeoliaError("Issue with accessing data")
+                pass
 
     def _get_tokenPassword(self, check_only=False):
-        """Get token password for next actions who need authentication."""
+        """Get token password for next actions who needs authentication."""
         datas = self.__construct_body(
             "getAuthentificationFront",
             {"cptEmail": self._email, "cptPwd": self._pwd},
             anonymous=True,
         )
-        _LOGGER.debug(f"Sending authentication request with email: {self._email}")
-        _LOGGER.debug(f"Authentication request data: {datas}")
+        # _LOGGER.debug(f"_get_token_password : {datas.replace(self._pwd,"MySecretPassWord")}")
         resp = self.session.post(
             self.address,
             headers=self.headers,
             data=datas,
         )
-        _LOGGER.debug(f"Response status={resp.status_code}")
-        _LOGGER.debug(f"Response text={resp.text}")
+        _LOGGER.debug(f"resp status={resp.status_code}")
         if resp.status_code != 200:
-            _LOGGER.error("Problem with authentication")
-            raise VeoliaError(f"POST /_get_tokenPassword/ {resp.status_code}")
+            _LOGGER.error("problem with authentication")
+            raise Exception(f"POST /__get_tokenPassword/ {resp.status_code}")
         else:
             result = xmltodict.parse(f"<soap:Envelope{resp.text.split('soap:Envelope')[1]}soap:Envelope>")
             _LOGGER.debug(f"result_getauth={result}")
@@ -195,6 +204,7 @@ class VeoliaClient:
                 else:
                     self.__aboId = contrat["aboId"]
             _LOGGER.debug(f"__aboId={self.__aboId}")
+            # _LOGGER.debug(f"__tokenPassword={self.__tokenPassword}")
 
     def __create_enveloppe(self):
         """Return enveloppe for requests.
@@ -202,10 +212,13 @@ class VeoliaClient:
         Returns:
             xml: enveloppe
         """
+        # <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
         __enveloppe = ET.Element("soap:Envelope")
         __enveloppe.set("xmlns:soap", "http://schemas.xmlsoap.org/soap/envelope/")
         __enveloppe.set("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance")
+        # <soap:Header>
         __header = ET.SubElement(__enveloppe, "soap:Header")
+        # <wsse:Security xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd">
         __security = ET.SubElement(__header, "wsse:Security")
         __security.set(
             "xmlns:wsse",
@@ -215,28 +228,34 @@ class VeoliaClient:
             "xmlns:wsu",
             "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd",
         )
+        # <wsse:UsernameToken xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd" wsu:Id="UsernameToken-aiehdbsf52">
         __usernameToken = ET.SubElement(__security, "wsse:UsernameToken")
         __usernameToken.set(
             "xmlns:wsu",
             "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd",
         )
         __usernameToken.set("wsu:Id", "UsernameToken-aiehdbsf52")
+        # <wsse:Username>anonyme</wsse:Username>
         __username = ET.SubElement(__usernameToken, "wsse:Username")
         __username.text = "anonyme"
+        # <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">PYg6fMplCoo19dZVXkn2</wsse:Password>
         __password = ET.SubElement(__usernameToken, "wsse:Password")
         __password.set(
             "Type",
             "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText",
         )
         __password.text = "PYg6fMplCoo19dZVXkn2"
+        # <wsse:Nonce EncodingType="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary">1dWl+HzD/sJsWzAcDHQX6Q==</wsse:Nonce>
         __nonce = ET.SubElement(__usernameToken, "wsse:Nonce")
         __nonce.set(
             "EncodingType",
             "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary",
         )
         __nonce.text = "1dWl+HzD/sJsWzAcDHQX6Q=="
+        # <wsse:Created>2022-11-22T07:54:00.000Z</wsse:Created>
         __created = ET.SubElement(__usernameToken, "wsse:Created")
         __created.text = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        # <soap:Body>
         ET.SubElement(__enveloppe, "soap:Body")
         return __enveloppe
 

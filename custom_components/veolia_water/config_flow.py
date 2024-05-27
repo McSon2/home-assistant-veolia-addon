@@ -4,11 +4,12 @@ import logging
 from homeassistant import config_entries
 import voluptuous as vol
 
-from .veolia_client import BadCredentialsException, VeoliaClient  # Assurez-vous que la casse est correcte
+from .VeoliaClient import BadCredentialsException, VeoliaClient
 from .const import CONF_ABO_ID, CONF_PASSWORD, CONF_USERNAME, DOMAIN
 from .debug import decoratorexceptionDebug
 
-_LOGGER = logging.getLogger(__name__)
+_LOGGER: logging.Logger = logging.getLogger(__package__)
+
 
 class VeoliaFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for veolia."""
@@ -25,6 +26,10 @@ class VeoliaFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(self, user_input=None):
         """Handle a flow initialized by the user."""
         self._errors = {}
+
+        # Uncomment the next 2 lines if only a single instance of the integration is allowed:
+        # if self._async_current_entries():
+        #     return self.async_abort(reason="single_instance_allowed")
 
         if user_input is not None:
             valid = await self._test_credentials(user_input[CONF_USERNAME], user_input[CONF_PASSWORD])
@@ -64,7 +69,7 @@ class VeoliaFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     @decoratorexceptionDebug
     async def _test_credentials(self, username, password):
-        """Return true if credentials are valid."""
+        """Return true if credentials is valid."""
         try:
             client = VeoliaClient(username, password)
             await self.hass.async_add_executor_job(client.login)

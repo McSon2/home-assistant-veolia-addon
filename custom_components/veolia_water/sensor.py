@@ -1,64 +1,142 @@
+"""Sensor platform for Veolia."""
+
 import logging
-from datetime import timedelta
-
-from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
-from homeassistant.const import UnitOfVolume
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.exceptions import ConfigEntryNotReady
-
-from .const import DOMAIN
-from .veolia_client import VeoliaClient  # Assurez-vous que la casse est correcte
+from homeassistant.components.sensor import SensorStateClass, SensorDeviceClass
+from .const import DAILY, DOMAIN, HISTORY, MONTHLY
+from .debug import decoratorexceptionDebug
+from .entity import VeoliaEntity
 
 _LOGGER = logging.getLogger(__name__)
 
-async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
-    email = config_entry.data["username"]
-    password = config_entry.data["password"]
-    abo_id = config_entry.data.get("abo_id")
 
-    session = async_get_clientsession(hass)
-    client = VeoliaClient(email, password, session, abo_id)
-    coordinator = VeoliaDataUpdateCoordinator(hass, client=client)
+async def async_setup_entry(hass, entry, async_add_devices):
+    """Set up sensor platform."""
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    sensors = [
+        VeoliaDailyUsageSensor(coordinator, entry),
+        VeoliaMonthlyUsageSensor(coordinator, entry),
+        VeoliaLastIndexSensor(coordinator, entry),
+    ]
+    async_add_devices(sensors)
 
-    await coordinator.async_refresh()
-    if not coordinator.last_update_success:
-        raise ConfigEntryNotReady
 
-    async_add_entities([VeoliaWaterSensor(coordinator)], True)
+class VeoliaLastIndexSensor(VeoliaEntity):
+    """Monitors the last index."""
 
-class VeoliaWaterSensor(SensorEntity):
-    def __init__(self, coordinator):
-        self.coordinator = coordinator
-        self._attr_name = "Veolia Water Consumption"
-        self._attr_device_class = "water"
-        self._attr_state_class = "total_increasing"
-        self._attr_unit_of_measurement = UnitOfVolume.CUBIC_METERS
+    @property
+    def name(self):
+        """Return the name of the sensor."""
+        return "veolia_last_index"
+
+    @property
+    def state_class(self):
+        """Return the state_class of the sensor."""
+        return SensorStateClass.TOTAL_INCREASING
+
+    @property
+    def device_class(self):
+        """Return the device_class of the sensor."""
+        return SensorDeviceClass.WATER
+
+    @property
+    def unit_of_measurement(self):
+        """Return the unit_of_measurement of the sensor."""
+        return "m³"
+
+    @property
+    @decoratorexceptionDebug
+    def state(self):
+        """Return the state of the sensor."""
+        state = self.coordinator.data["last_index"]
+        if state > 0:
+            return state
+        return None
+
+    @property
+    @decoratorexceptionDebug
+    def extra_state_attributes(self):
+        """Return the extra state attributes."""
+        return self._base_extra_state_attributes()
+
+
+class VeoliaDailyUsageSensor(VeoliaEntity):
+    """Monitors the daily water usage."""
+
+    @property
+    def name(self):
+        """Return the name of the sensor."""
+        return "veolia_daily_consumption"
+
+    @property
+    def state_class(self):
+        """Return the state_class of the sensor."""
+        return SensorStateClass.TOTAL_INCREASING
+
+    @property
+    def device_class(self):
+        """Return the device_class of the sensor."""
+        return SensorDeviceClass.WATER
+
+    @property
+    def unit_of_measurement(self):
+        """Return the unit_of_measurement of the sensor."""
+        return "m³"
+
+    @property
+    @decoratorexceptionDebug
+    def state(self):
+        """Return the state of the sensor."""
+        state = self.coordinator.data[DAILY][HISTORY][0][1]
+        if state > 0:
+            return state
+        return None
+
+    @property
+    @decoratorexceptionDebug
+    def extra_state_attributes(self):
+        """Return the extra state attributes."""
+        attrs = self._base_extra_state_attributes() | {
+            "historyConsumption": self.coordinator.data[DAILY][HISTORY],
+        }
+        return attrs
+
+
+class VeoliaMonthlyUsageSensor(VeoliaEntity):
+    """Monitors the monthly water usage."""
+
+    @property
+    def name(self):
+        """Return the name of the sensor."""
+        return "veolia_monthly_consumption"
+
+    @property
+    def state_class(self):
+        """Return the state_class of the sensor."""
+        return SensorStateClass.TOTAL_INCREASING
+
+    @property
+    def device_class(self):
+        """Return the device_class of the sensor."""
+        return SensorDeviceClass.WATER
+
+    @property
+    def unit_of_measurement(self):
+        """Return the unit_of_measurement of the sensor."""
+        return "m³"
 
     @property
     def state(self):
-        return self.coordinator.data.get("last_index")
+        """Return the state of the sensor."""
+        state = self.coordinator.data[MONTHLY][HISTORY][0][1]
+        if state > 0:
+            return state
+        return None
 
     @property
+    @decoratorexceptionDebug
     def extra_state_attributes(self):
-        return self.coordinator.data
-
-    async def async_update(self):
-        await self.coordinator.async_request_refresh()
-
-class VeoliaDataUpdateCoordinator(DataUpdateCoordinator):
-    def __init__(self, hass, client):
-        self.client = client
-        super().__init__(
-            hass,
-            _LOGGER,
-            name="Veolia water consumption",
-            update_interval=timedelta(hours=1),
-        )
-
-    async def _async_update_data(self):
-        try:
-            return await self.hass.async_add_executor_job(self.client.update_all)
-        except Exception as e:
-            raise UpdateFailed(f"Error fetching data: {e}")
+        """Return the extra state attributes."""
+        attrs = self._base_extra_state_attributes() | {
+            "historyConsumption": self.coordinator.data[MONTHLY][HISTORY],
+        }
+        return attrs
