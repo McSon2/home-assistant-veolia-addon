@@ -1,57 +1,75 @@
+"""Adds config flow for Veolia."""
 import logging
-import voluptuous as vol
+
 from homeassistant import config_entries
-from homeassistant.core import callback
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+import voluptuous as vol
 
-from .const import DOMAIN
+from .VeoliaClient import BadCredentialsException, VeoliaClient
+from .const import CONF_ABO_ID, CONF_PASSWORD, CONF_USERNAME, DOMAIN
+from .debug import decoratorexceptionDebug
 
-_LOGGER = logging.getLogger(__name__)
+_LOGGER: logging.Logger = logging.getLogger(__package__)
 
-@config_entries.HANDLERS.register(DOMAIN)
-class VeoliaWaterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+
+class VeoliaFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
+    """Config flow for veolia."""
+
     VERSION = 1
     CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_POLL
 
+    @decoratorexceptionDebug
+    def __init__(self):
+        """Initialize."""
+        self._errors = {}
+
+    @decoratorexceptionDebug
     async def async_step_user(self, user_input=None):
-        errors = {}
+        """Handle a flow initialized by the user."""
+        self._errors = {}
+
         if user_input is not None:
-            email = user_input.get("email")
-            password = user_input.get("password")
-            abo_id = user_input.get("abo_id")
+            valid = await self._test_credentials(user_input[CONF_USERNAME], user_input[CONF_PASSWORD])
+            if valid:
+                if user_input[CONF_ABO_ID] != "":
+                    title = f"{user_input[CONF_USERNAME]} - {user_input[CONF_ABO_ID]}"
+                else:
+                    title = f"{user_input[CONF_USERNAME]}"
+                return self.async_create_entry(title=title, data=user_input)
+            else:
+                self._errors["base"] = "auth"
 
-            return self.async_create_entry(title="Veolia Water", data=user_input)
+            return await self._show_config_form(user_input)
 
-        data_schema = vol.Schema({
-            vol.Required("email"): str,
-            vol.Required("password"): str,
-            vol.Optional("abo_id"): str,
-        })
+        user_input = {}
+        # Provide defaults for form
+        user_input[CONF_USERNAME] = ""
+        user_input[CONF_PASSWORD] = ""
+        user_input[CONF_ABO_ID] = ""
+
+        return await self._show_config_form(user_input)
+
+    @decoratorexceptionDebug
+    async def _show_config_form(self, user_input):
+        """Show the configuration form to edit location data."""
         return self.async_show_form(
             step_id="user",
-            data_schema=data_schema,
-            errors=errors
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_USERNAME, default=user_input[CONF_USERNAME]): str,
+                    vol.Required(CONF_PASSWORD, default=user_input[CONF_PASSWORD]): str,
+                    vol.Optional(CONF_ABO_ID, default=user_input[CONF_ABO_ID]): str,
+                }
+            ),
+            errors=self._errors,
         )
 
-    @staticmethod
-    @callback
-    def async_get_options_flow(config_entry):
-        return VeoliaWaterOptionsFlowHandler(config_entry)
-
-class VeoliaWaterOptionsFlowHandler(config_entries.OptionsFlow):
-    def __init__(self, config_entry):
-        self.config_entry = config_entry
-
-    async def async_step_init(self, user_input=None):
-        if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
-
-        data_schema = vol.Schema({
-            vol.Required("email", default=self.config_entry.data.get("email")): str,
-            vol.Required("password", default=self.config_entry.data.get("password")): str,
-            vol.Optional("abo_id", default=self.config_entry.data.get("abo_id")): str,
-        })
-        return self.async_show_form(
-            step_id="init",
-            data_schema=data_schema
-        )
+    @decoratorexceptionDebug
+    async def _test_credentials(self, username, password):
+        """Return true if credentials is valid."""
+        try:
+            client = VeoliaClient(username, password)
+            await self.hass.async_add_executor_job(client.login)
+            return True
+        except BadCredentialsException:
+            pass
+        return False
