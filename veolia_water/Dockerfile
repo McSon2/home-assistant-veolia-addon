@@ -8,11 +8,11 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN apk add --no-cache python3 py3-pip
 
 # Copy data
-COPY run.sh /etc/services.d/veolia/run
-COPY veolia_client.py /etc/services.d/veolia/
+COPY run.sh /run.sh
+COPY veolia_client.py /veolia_client.py
 
 # Set execute permission
-RUN chmod +x /etc/services.d/veolia/run
+RUN chmod +x /run.sh
 
-# Ensure the script runs as PID 1
-CMD [ "/init" ]
+# Run script
+CMD [ "/run.sh" ]
