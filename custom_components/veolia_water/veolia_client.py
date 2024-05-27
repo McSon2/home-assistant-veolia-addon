@@ -1,23 +1,21 @@
-import argparse
+import logging
 import requests
 import xmltodict
-import logging
 from datetime import datetime
-import xml.etree.ElementTree as ET
-import operator
 from copy import copy
+import xml.etree.ElementTree as ET
 
 _LOGGER = logging.getLogger(__name__)
 
+DAILY = "daily"
+MONTHLY = "monthly"
+HISTORY = "history"
 FORMAT_DATE = "%Y-%m-%d"
-DAILY = "DAILY"
-MONTHLY = "MONTHLY"
-HISTORY = "HISTORY"
 
 class VeoliaClient:
     """Class to manage the webServices system."""
 
-    def __init__(self, email: str, password: str, session=requests.Session(), abo_id="") -> None:
+    def __init__(self, email: str, password: str, abo_id="") -> None:
         """Initialize the client object."""
         self._email = email
         self._pwd = password
@@ -33,18 +31,18 @@ class VeoliaClient:
     def login(self):
         """Check if login is right.
 
-        raise BadCredentialsException if not
+        raise Exception if not
         """
         try:
             _LOGGER.info("Check credentials")
             self._get_tokenPassword(check_only=True)
         except Exception as e:
             _LOGGER.error(f"wrong authentication : {e}")
-            raise BadCredentialsException(f"wrong authentication : {e}")
+            raise Exception(f"wrong authentication : {e}")
 
     def update_all(self):
         """
-        Return the latest collected datas.
+        Return the latest collected data.
 
         Returns:
             dict: dict of consumptions by date and by period
@@ -55,7 +53,7 @@ class VeoliaClient:
 
     def update(self, month=False):
         """
-        Return the latest collected datas by arg.
+        Return the latest collected data by arg.
 
         Args:
             month (bool, optional): if True returns consumption by Month else by Day. Defaults to False.
@@ -80,10 +78,7 @@ class VeoliaClient:
         """Fetch latest data from Veolia."""
         _LOGGER.debug(f"_fetch_data by month ? {month}")
         period = MONTHLY if month is True else DAILY
-        if month is True:
-            action = "getConsommationMensuelle"
-        else:
-            action = "getConsommationJournaliere"
+        action = "getConsommationMensuelle" if month else "getConsommationJournaliere"
         _LOGGER.debug(f"action={action}")
         datas = self.__construct_body(action, {"aboNum": self.__aboId}, anonymous=False)
 
@@ -95,7 +90,7 @@ class VeoliaClient:
         _LOGGER.debug(str(resp))
         _LOGGER.debug(str(resp.text))
         if resp.status_code != 200:
-            msg = f"Error {resp.status_code} fetching data :"
+            msg = f"Error {resp.status_code} fetching data: "
             try:
                 msg += xmltodict.parse(f"<soap:Envelope{resp.text.split('soap:Envelope')[1]}soap:Envelope>")[
                     "soap:Envelope"
@@ -111,9 +106,9 @@ class VeoliaClient:
                 lstindex = result["soap:Envelope"]["soap:Body"][f"ns2:{action}Response"]["return"]
                 self.attributes[period][HISTORY] = []
 
-                if month is True:
+                if month:
                     if isinstance(lstindex, list):
-                        lstindex.sort(key=operator.itemgetter("annee", "mois"), reverse=True)
+                        lstindex.sort(key=lambda x: (x["annee"], x["mois"]), reverse=True)
                         for val in lstindex:
                             self.attributes[period][HISTORY].append(
                                 (
@@ -128,9 +123,10 @@ class VeoliaClient:
                                 int(lstindex["consommation"]),
                             )
                         )
+
                 else:
                     if isinstance(lstindex, list):
-                        lstindex.sort(key=operator.itemgetter("dateReleve"), reverse=True)
+                        lstindex.sort(key=lambda x: x["dateReleve"], reverse=True)
                         for val in lstindex:
                             self.attributes[period][HISTORY].append(
                                 (
@@ -149,11 +145,10 @@ class VeoliaClient:
                         self.attributes["last_index"] = int(lstindex["index"]) + int(lstindex["consommation"])
                 self.success = True
             except ValueError:
-                raise VeoliaError("Issue with accessing data")
-                pass
+                raise Exception("Issue with accessing data")
 
     def _get_tokenPassword(self, check_only=False):
-        """Get token password for next actions who needs authentication."""
+        """Get token password for next actions who need authentication."""
         datas = self.__construct_body(
             "getAuthentificationFront",
             {"cptEmail": self._email, "cptPwd": self._pwd},
@@ -167,7 +162,7 @@ class VeoliaClient:
         _LOGGER.debug(f"resp status={resp.status_code}")
         if resp.status_code != 200:
             _LOGGER.error("problem with authentication")
-            raise Exception(f"POST /__get_tokenPassword/ {resp.status_code}")
+            raise Exception(f"POST /_get_tokenPassword/ {resp.status_code}")
         else:
             result = xmltodict.parse(f"<soap:Envelope{resp.text.split('soap:Envelope')[1]}soap:Envelope>")
             _LOGGER.debug(f"result_getauth={result}")
@@ -257,38 +252,3 @@ class VeoliaClient:
             username_token.find("wsse:Password").text = self.__tokenPassword
 
         return ET.tostring(datas, encoding="UTF-8")
-
-def send_data_to_home_assistant(sensor_name, state, attributes, token):
-    url = f"http://supervisor/core/api/states/{sensor_name}"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json",
-    }
-    data = {
-        "state": state,
-        "attributes": attributes
-    }
-    response = requests.post(url, headers=headers, json=data)
-    _LOGGER.info(f"Data sent to Home Assistant: {response.status_code}, {response.text}")
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--email", required=True, help="Veolia account email")
-    parser.add_argument("--password", required=True, help="Veolia account password")
-    parser.add_argument("--abo_id", required=True, help="Veolia contract ID")
-    parser.add_argument("--token", required=True, help="Home Assistant long-lived access token")
-    args = parser.parse_args()
-
-    client = VeoliaClient(args.email, args.password, abo_id=args.abo_id)
-    client.login()
-    data = client.update_all()
-
-    # Process and send data to Home Assistant
-    daily_consumption = data[DAILY][HISTORY][0][1]
-    attributes = {
-        "device_class": "water",
-        "state_class": "total_increasing",
-        "unit_of_measurement": "L",
-        "friendly_name": "Veolia Water Consumption"
-    }
-    send_data_to_home_assistant("sensor.veolia_water_consumption", daily_consumption, attributes, args.token)

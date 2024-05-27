@@ -1,0 +1,11 @@
+{
+    "domain": "veolia_water",
+    "name": "Veolia Water",
+    "version": "1.0",
+    "documentation": "https://github.com/your_github_username/veolia_water",
+    "requirements": ["xmltodict", "requests", "voluptuous"],
+    "dependencies": [],
+    "codeowners": ["@your_github_username"],
+    "config_flow": true
+  }
+  

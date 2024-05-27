@@ -1,0 +1,16 @@
+{
+    "config": {
+      "step": {
+        "user": {
+          "title": "Veolia Water",
+          "description": "Please enter your Veolia account information.",
+          "data": {
+            "email": "Email",
+            "password": "Password",
+            "abo_id": "Contract ID (optional)"
+          }
+        }
+      }
+    }
+  }
+  
