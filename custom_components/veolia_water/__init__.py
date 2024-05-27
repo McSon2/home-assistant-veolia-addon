@@ -11,22 +11,17 @@ from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .veolia_client import VeoliaClient  # Assurez-vous que la casse est correcte
+from .veolia_client import VeoliaClient
 from .const import CONF_ABO_ID, CONF_PASSWORD, CONF_USERNAME, DOMAIN, PLATFORMS
-from .debug import decoratorexceptionDebug
 
 SCAN_INTERVAL = timedelta(hours=10)
 
 _LOGGER = logging.getLogger(__name__)
 
-
-@decoratorexceptionDebug
 async def async_setup(hass: HomeAssistant, config: Config):
     """Set up this integration using YAML is not supported."""
     return True
 
-
-@decoratorexceptionDebug
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Set up this integration using UI."""
     if hass.data.get(DOMAIN) is None:
@@ -53,7 +48,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
     return True
 
-
 class VeoliaDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching data from the API."""
 
@@ -74,8 +68,6 @@ class VeoliaDataUpdateCoordinator(DataUpdateCoordinator):
         except Exception as exception:
             raise UpdateFailed() from exception
 
-
-@decoratorexceptionDebug
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Handle removal of an entry."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
@@ -93,8 +85,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     return unloaded
 
-
-@decoratorexceptionDebug
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Reload config entry."""
     await async_unload_entry(hass, entry)
